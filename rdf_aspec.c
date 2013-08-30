@@ -15,7 +15,20 @@
 
 const char program[] = "rdf_aspec";
 const char author[]  = "Petr Voytsik";
-const char version[] = "1.0";
+const char version[] = "1.0.90";
+
+typedef struct rdf_header{
+    char sig[5];
+    uint16_t header_size;
+    char date[19];
+    char station[12];
+    char source[12];
+    char exper[12];
+    char data_rate[3];
+    char rec_mode[2];
+    char rdr_mode[3];
+} rdf_header_t;
+
 
 static float lut1bit[256][8];
 static float lut2bit[256][4];
@@ -96,16 +109,17 @@ static int decode_2bit(const uint8_t * const in, float **out, size_t n)
  *  Print experiment name and date to stdout 
  *  Checks the header size
  *
- *  Returns the number of bytes to offset from the file start to read data
- *  offset = header_size + time_offset
+ *  On success, parse_rdf_header returns the number of bits per sample
+ *  On error, -1 is returned
  */
-static off_t parse_rdf_header(const char *h, double t_off)
+static int parse_rdf_header(const char *h, double t_off)
 {
-    off_t file_header_size = 0;
+    unsigned file_header_size;
     char experiment_name[11], data_date[18];
     struct tm tm0;
     time_t t;
     char *time_str;
+    int bits = 0;
 
     strncpy(data_date, &h[6], 18);        
     data_date[17] = 0;
@@ -117,17 +131,18 @@ static off_t parse_rdf_header(const char *h, double t_off)
     strptime(data_date, "%Y %j-%H:%M:%S", &tm0);
     t = mktime(&tm0) + (time_t)t_off;
 
-    file_header_size = (off_t)((unsigned)(h[5] << 8) | h[4]);
+    file_header_size = ((unsigned)(h[5] << 8) | h[4]);
     if(file_header_size != 256){
         fprintf(stderr, "file_header_size != 256. Exiting\n");
-        exit(EXIT_FAILURE);
+        
+        return -1;
     }
 
     time_str = ctime(&t);
     time_str[strlen(time_str)-1] = 0;
     printf("#%s (%sUT)\n", experiment_name, time_str);
 
-    return file_header_size + (off_t)(400. * 40000. * t_off);
+    return bits;
 }
 
 static void usage()
@@ -153,6 +168,7 @@ int main(int argc, char *argv[])
     float re, im;
     double df, freq, time_off = 0.;
     char header[256];
+    int bits; /* Number of bits per sample */
     
     if(argc < 4){
         usage();
@@ -176,15 +192,27 @@ int main(int argc, char *argv[])
 
     n = fread(header, sizeof(uint8_t), 256UL, f);
     if(n != 256){
-        fprintf(stderr, "Read only %lu of %lu bytes from RDF-file header. Exiting.", 
+        fprintf(stderr, "Read only %lu of %lu bytes from RDF-file header. Exiting.\n", 
                 n, 256UL);
         fclose(f);
         exit(EXIT_FAILURE);
     }
 
-    offset = parse_rdf_header(header, time_off);
+    bits = parse_rdf_header(header, time_off);
+    if(bits != 1 && bits != 2){
+        if(bits < 0)
+            fprintf(stderr, "Error parsing RDF-file header. \n");
+        else
+            fprintf(stderr, "Wrong namber of bits %d\n", bits);
 
-    if(fseeko(f, offset, SEEK_SET) < 0)
+        fclose(f);
+        exit(EXIT_FAILURE);
+    }
+
+    /*offset = parse_rdf_header(header, time_off);*/
+    offset = (off_t)(400. * 40000. * time_off);
+
+    if(fseeko(f, offset, SEEK_CUR) < 0)
         handle_error("fseeko");
 
     raw_data = (uint8_t *)malloc(sizeof(uint8_t)*N/2);
