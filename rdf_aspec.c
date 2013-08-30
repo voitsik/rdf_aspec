@@ -47,6 +47,7 @@ static void initluts()
 /**
  *  decode_1bit
  *  Convert 1bit encoded raw data to 4 float arrays
+ *  n - number of samples to decode
  */
 static int decode_1bit(const uint8_t * const in, float **out, size_t n)
 {
@@ -63,6 +64,27 @@ static int decode_1bit(const uint8_t * const in, float **out, size_t n)
         out[1][2*i+1] = fp[5];
         out[2][2*i+1] = fp[6];
         out[3][2*i+1] = fp[7];
+    }
+
+    return 0;
+}
+
+/**
+ *  decode_2bit
+ *  Convert 2bit encoded raw data to 4 float arrays
+ *  n - number of samples to decode
+ */
+static int decode_2bit(const uint8_t * const in, float **out, size_t n)
+{
+    size_t  i;
+    float *fp;
+
+    for(i = 0; i < n; ++i){
+        fp = lut2bit[in[i]];
+        out[0][i]   = fp[0];
+        out[1][i]   = fp[1];
+        out[2][i]   = fp[2];
+        out[3][i]   = fp[3];
     }
 
     return 0;
