@@ -18,11 +18,14 @@ const char author[]  = "Petr Voytsik";
 const char version[] = "1.0";
 
 static float lut1bit[256][8];
+static float lut2bit[256][4];
 
 static void initluts()
 {
-	unsigned b, i, l;
+    const float HiMag = 3.3359;
+	unsigned b, i, l, s, m;
 	const float lut2level[2] = {-1.0, 1.0};
+	const float lut4level[4] = {-HiMag, 1.0, -1.0, HiMag};
 
 	for(b = 0; b < 256; ++b){
 		/* lut1bit */
@@ -30,31 +33,26 @@ static void initluts()
 			l = (b>>i)&1;
 			lut1bit[b][i] = lut2level[l];
 		}
+
+		/* lut2bit */
+		for(i = 0; i < 4; i++){
+		    s = i*2;    /* 0, 2, 4, 6 */
+		    m = s+1;    /* 1, 3, 5, 7 */
+		    l = ((b>>s)&1) + (((b>>m)&1)<<1);
+		    lut2bit[b][i] = lut4level[l];
+		}
 	}
 }
 
 /**
- *  decode
+ *  decode_1bit
  *  Convert 1bit encoded raw data to 4 float arrays
  */
-static int decode(const uint8_t * const in, float **out, size_t n)
+static int decode_1bit(const uint8_t * const in, float **out, size_t n)
 {
-    /*const float a[] = {-1., 1.};*/
     size_t  i;
     float *fp;
 
-/*
-    for(i = 0; i < n/2; i++){
-            out[0][2*i]   = a[ (in[i] >> 0) & 1 ];
-            out[1][2*i]   = a[ (in[i] >> 1) & 1 ];
-            out[2][2*i]   = a[ (in[i] >> 2) & 1 ];
-            out[3][2*i]   = a[ (in[i] >> 3) & 1 ];
-            out[0][2*i+1] = a[ (in[i] >> 4) & 1 ]; 
-            out[1][2*i+1] = a[ (in[i] >> 5) & 1 ]; 
-            out[2][2*i+1] = a[ (in[i] >> 6) & 1 ]; 
-            out[3][2*i+1] = a[ (in[i] >> 7) & 1 ]; 
-    }
-*/
     for(i = 0; i < n/2; ++i){
         fp = lut1bit[in[i]];
         out[0][2*i]   = fp[0];
@@ -190,7 +188,7 @@ int main(int argc, char *argv[])
             break;
         }
         
-        decode(raw_data, f_data, N);
+        decode_1bit(raw_data, f_data, N);
 
         /* Four channels */
         for(j = 0; j < 4; j++){
