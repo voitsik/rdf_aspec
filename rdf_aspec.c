@@ -17,16 +17,18 @@ const char program[] = "rdf_aspec";
 const char author[]  = "Petr Voytsik";
 const char version[] = "1.0.90";
 
+/* Decoded RDF-file header */
 typedef struct rdf_header{
     char sig[5];
     uint16_t header_size;
-    char date[19];
+    /*char date[19];*/
+    time_t date;
     char station[12];
     char source[12];
     char exper[12];
-    char data_rate[3];
-    char rec_mode[2];
-    char rdr_mode[3];
+    int data_rate;
+    char rec_mode;
+    char rdr_mode[4];
 } rdf_header_t;
 
 
@@ -103,46 +105,86 @@ static int decode_2bit(const uint8_t * const in, float **out, size_t n)
     return 0;
 }
 
+
+#define GET_FIELD(dest, src, n)     \
+        do {                        \
+            strncpy(dest, src, n);  \
+            dest[n] = 0;            \
+        } while(0)
+
 /**
  *  parse_rdf_header 
- *  Parses RDF-file header
- *  Print experiment name and date to stdout 
- *  Checks the header size
+ *  Parse RDF-file header
+ *  Check the header signature and size
  *
  *  On success, parse_rdf_header returns the number of bits per sample
  *  On error, -1 is returned
  */
-static int parse_rdf_header(const char *h, double t_off)
+static int parse_rdf_header(const char *h, rdf_header_t *info)
 {
-    unsigned file_header_size;
-    char experiment_name[11], data_date[18];
+    char data_date[19], datarate[3];
     struct tm tm0;
-    time_t t;
-    char *time_str;
     int bits = 0;
 
-    strncpy(data_date, &h[6], 18);        
-    data_date[17] = 0;
+    /*strncpy(info->sig, h, 4);*/
+    /*info->sig[4] = 0;*/
+    GET_FIELD(info->sig, h, 4);
 
-    strncpy(experiment_name, &h[46], 11); 
-    experiment_name[10] = 0;
+    if(strcmp(info->sig, "RDF1")){
+        fprintf(stderr, "Wrong RDF signature '%s' while RDF1 expected.\n", info->sig);
 
-    memset(&tm0, 0, sizeof(tm0));
-    strptime(data_date, "%Y %j-%H:%M:%S", &tm0);
-    t = mktime(&tm0) + (time_t)t_off;
-
-    file_header_size = ((unsigned)(h[5] << 8) | h[4]);
-    if(file_header_size != 256){
-        fprintf(stderr, "file_header_size != 256. Exiting\n");
-        
         return -1;
     }
 
+    memcpy(&info->header_size, &h[4], 2);
+    if(info->header_size != 256){
+        fprintf(stderr, "Header size is %u bytes while 256 expected.\n",
+                        info->header_size);
+
+        return -1;
+    }
+
+    /*strncpy(data_date, &h[6], 18);        */
+    /*data_date[18] = 0;*/
+    GET_FIELD(data_date, &h[6], 18);
+
+    /* Decode date/time */
+    memset(&tm0, 0, sizeof(tm0));
+    strptime(data_date, "%Y %j-%H:%M:%S", &tm0);
+    info->date = mktime(&tm0);
+
+    GET_FIELD(info->station, &h[24], 11);
+    GET_FIELD(info->source, &h[35], 11);
+    GET_FIELD(info->exper, &h[46], 11);
+    GET_FIELD(datarate, &h[57], 2);
+    info->data_rate = atoi(datarate);
+    info->rec_mode = h[59];
+    GET_FIELD(info->rdr_mode, &h[60], 3);
+
+    if(info->data_rate == 16 && !strcmp(info->rdr_mode, "DEC")){
+        bits = 1;
+    }else if(info->data_rate == 32 && !strcmp(info->rdr_mode, "DAS")){
+        bits = 2;
+    }else{
+        fprintf(stderr, "Unsupported combination of RDR mode (%s) and data rate %d\n",
+                        info->rdr_mode, info->data_rate);
+        bits = -1;
+    }
+    
+    return bits;
+}
+
+/**
+ *  print_header prints experiment name and time to stdout
+ */
+static void print_header(rdf_header_t *h, time_t t_off)
+{
+    char *time_str;
+    time_t t = h->date + t_off;
+
     time_str = ctime(&t);
     time_str[strlen(time_str)-1] = 0;
-    printf("#%s (%sUT)\n", experiment_name, time_str);
-
-    return bits;
+    printf("#%s (%sUT)\n", h->exper, time_str);
 }
 
 static void usage()
@@ -167,8 +209,9 @@ int main(int argc, char *argv[])
     fftwf_plan p;
     float re, im;
     double df, freq, time_off = 0.;
-    char header[256];
     int bits; /* Number of bits per sample */
+    rdf_header_t rdf_info;
+    char header[256];
     
     if(argc < 4){
         usage();
@@ -177,7 +220,7 @@ int main(int argc, char *argv[])
     }
 
     f = fopen(argv[1], "r");
-    if(f == NULL){
+    if(!f){
         fprintf(stderr, "Could not open file '%s': ", argv[1]);
         handle_error("");
     }
@@ -198,22 +241,23 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    bits = parse_rdf_header(header, time_off);
+    bits = parse_rdf_header(header, &rdf_info);
     if(bits != 1 && bits != 2){
         if(bits < 0)
             fprintf(stderr, "Error parsing RDF-file header. \n");
         else
-            fprintf(stderr, "Wrong namber of bits %d\n", bits);
+            fprintf(stderr, "Wrong number of bits %d\n", bits);
 
         fclose(f);
+
         exit(EXIT_FAILURE);
     }
 
-    /*offset = parse_rdf_header(header, time_off);*/
     offset = (off_t)(400. * 40000. * time_off);
 
-    if(fseeko(f, offset, SEEK_CUR) < 0)
-        handle_error("fseeko");
+    if(offset)
+        if(fseeko(f, offset, SEEK_CUR) < 0)
+            handle_error("fseeko");
 
     raw_data = (uint8_t *)malloc(sizeof(uint8_t)*N/2);
 
@@ -230,6 +274,7 @@ int main(int argc, char *argv[])
     p = fftwf_plan_dft_r2c_1d(N, f_data[0], c_data[0], FFTW_ESTIMATE);
 
     initluts();
+    print_header(&rdf_info, time_off);
 
     for(k = 0; k < M; k++){
         n = fread(raw_data, sizeof(uint8_t), N/2, f);
