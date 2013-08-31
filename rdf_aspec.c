@@ -15,7 +15,7 @@
 
 const char program[] = "rdf_aspec";
 const char author[]  = "Petr Voytsik";
-const char version[] = "1.0.90";
+const char version[] = "1.0.95";
 
 /* Decoded RDF-file header */
 typedef struct rdf_header{
@@ -31,16 +31,17 @@ typedef struct rdf_header{
     char rdr_mode[4];
 } rdf_header_t;
 
+static size_t count = 0;
 
 static float lut1bit[256][8];
 static float lut2bit[256][4];
 
 static void initluts()
 {
-    const float HiMag = 3.3359;
 	unsigned b, i, l, s, m;
+    const float HiMag = 3.3359;
 	const float lut2level[2] = {-1.0, 1.0};
-	const float lut4level[4] = {-HiMag, 1.0, -1.0, HiMag};
+    const float lut4level[4] = {-HiMag, 1.0, -1.0, HiMag};
 
 	for(b = 0; b < 256; ++b){
 		/* lut1bit */
@@ -80,6 +81,7 @@ static int decode_1bit(const uint8_t * const in, float **out, size_t n)
         out[2][2*i+1] = fp[6];
         out[3][2*i+1] = fp[7];
     }
+    count += n;
 
     return 0;
 }
@@ -101,6 +103,7 @@ static int decode_2bit(const uint8_t * const in, float **out, size_t n)
         out[2][i]   = fp[2];
         out[3][i]   = fp[3];
     }
+    count += n;
 
     return 0;
 }
@@ -296,6 +299,8 @@ int main(int argc, char *argv[])
             }
         }
     }
+
+    fprintf(stderr, "%lu samples decoded\n", count);
     
     free(raw_data);
     fclose(f);
