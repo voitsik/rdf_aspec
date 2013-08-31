@@ -211,6 +211,7 @@ int main(int argc, char *argv[])
     int bits; /* Number of bits per sample */
     rdf_header_t rdf_info;
     char header[256];
+    int (*decode)(const uint8_t * const , float **, size_t );
     
     if(argc < 4){
         usage();
@@ -241,7 +242,11 @@ int main(int argc, char *argv[])
     }
 
     bits = parse_rdf_header(header, &rdf_info);
-    if(bits != 1 && bits != 2){
+    if(bits == 1){
+        decode = &decode_1bit;
+    }else if(bits == 2){
+        decode = &decode_2bit;
+    }else{
         if(bits < 0)
             fprintf(stderr, "Error parsing RDF-file header. \n");
         else
@@ -282,12 +287,7 @@ int main(int argc, char *argv[])
             break;
         }
         
-        if(bits == 1)
-            decode_1bit(raw_data, f_data, N);
-        else if(bits == 2)
-            decode_2bit(raw_data, f_data, N);
-        else
-            break;
+        decode(raw_data, f_data, N);
 
         /* Four channels */
         for(j = 0; j < 4; j++){
