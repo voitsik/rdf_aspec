@@ -263,39 +263,40 @@ int main(int argc, char *argv[])
         if(fseeko(f, offset, SEEK_CUR) < 0)
             handle_error("fseeko");
 
-    raw_data = (uint8_t *)malloc(sizeof(uint8_t)*bits*N/2);
+    raw_data = (uint8_t *)malloc(sizeof(uint8_t)*bits*N);
 
     for(j = 0; j < 4; j++){
-        sp[j] = calloc(N/2+1, sizeof(float));
+        sp[j] = calloc(N+1, sizeof(float));
         /*c_data[j] = fftwf_alloc_complex(N/2+1);*/ /* Available only since FFTW 3.3-beta1 */
-        c_data[j] = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (N/2+1));
+        c_data[j] = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * (N+1));
         f_data[j] = (float *)c_data[j];
     }
 
     if(fftwf_import_system_wisdom() != 1)
         fprintf(stderr, "Warning: could not load system fftw wisdom\n");
 
-    p = fftwf_plan_dft_r2c_1d(N, f_data[0], c_data[0], FFTW_ESTIMATE);
+    p = fftwf_plan_dft_r2c_1d(2*N, f_data[0], c_data[0], FFTW_ESTIMATE);
 
     initluts();
     print_header(&rdf_info, time_off);
 
     for(k = 0; k < M; k++){
-        n = fread(raw_data, sizeof(uint8_t), bits*N/2, f);
-        if(n != bits*N/2){
+        n = fread(raw_data, sizeof(uint8_t), bits*N, f);
+        if(n != bits*N){
             perror("fread");
             break;
         }
         
-        decode(raw_data, f_data, N);
+        decode(raw_data, f_data, 2*N);
 
         /* Four channels */
         for(j = 0; j < 4; j++){
             fftwf_execute_dft_r2c(p, f_data[j], c_data[j]);
-            for(i = 0; i <= N/2; i++){
+            for(i = 0; i <= N; i++){
                 re = creal(c_data[j][i]);
                 im = cimag(c_data[j][i]);
-                sp[j][i] += (re*re + im*im)/(float)(N);
+                sp[j][i] += (re*re + im*im)/(float)(2*N);
+                /*sp[j][i] += (re*re + im*im);*/
             }
         }
     }
@@ -313,9 +314,9 @@ int main(int argc, char *argv[])
     fftwf_cleanup();
 
     freq = 0.;
-    df = 1. / (1e6 * 31.25e-9 * (double)N);
+    df = 1. / (1e6 * 31.25e-9 * (double)(2*N));
 
-    for(i = 0; i <= N/2; i++){
+    for(i = 0; i <= N; i++){
         printf("%f ", freq);
         for(j = 0; j < 4; j++)
             printf("%f ", sp[j][i]/(float)M);
