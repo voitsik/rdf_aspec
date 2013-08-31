@@ -126,8 +126,6 @@ static int parse_rdf_header(const char *h, rdf_header_t *info)
     struct tm tm0;
     int bits = 0;
 
-    /*strncpy(info->sig, h, 4);*/
-    /*info->sig[4] = 0;*/
     GET_FIELD(info->sig, h, 4);
 
     if(strcmp(info->sig, "RDF1")){
@@ -144,8 +142,6 @@ static int parse_rdf_header(const char *h, rdf_header_t *info)
         return -1;
     }
 
-    /*strncpy(data_date, &h[6], 18);        */
-    /*data_date[18] = 0;*/
     GET_FIELD(data_date, &h[6], 18);
 
     /* Decode date/time */
@@ -163,7 +159,7 @@ static int parse_rdf_header(const char *h, rdf_header_t *info)
 
     if(info->data_rate == 16 && !strcmp(info->rdr_mode, "DEC")){
         bits = 1;
-    }else if(info->data_rate == 32 && !strcmp(info->rdr_mode, "DAS")){
+    }else if(info->data_rate == 32){
         bits = 2;
     }else{
         fprintf(stderr, "Unsupported combination of RDR mode (%s) and data rate %d\n",
@@ -259,7 +255,7 @@ int main(int argc, char *argv[])
         if(fseeko(f, offset, SEEK_CUR) < 0)
             handle_error("fseeko");
 
-    raw_data = (uint8_t *)malloc(sizeof(uint8_t)*N/2);
+    raw_data = (uint8_t *)malloc(sizeof(uint8_t)*bits*N/2);
 
     for(j = 0; j < 4; j++){
         sp[j] = calloc(N/2+1, sizeof(float));
@@ -277,13 +273,18 @@ int main(int argc, char *argv[])
     print_header(&rdf_info, time_off);
 
     for(k = 0; k < M; k++){
-        n = fread(raw_data, sizeof(uint8_t), N/2, f);
-        if(n != N/2){
+        n = fread(raw_data, sizeof(uint8_t), bits*N/2, f);
+        if(n != bits*N/2){
             perror("fread");
             break;
         }
         
-        decode_1bit(raw_data, f_data, N);
+        if(bits == 1)
+            decode_1bit(raw_data, f_data, N);
+        else if(bits == 2)
+            decode_2bit(raw_data, f_data, N);
+        else
+            break;
 
         /* Four channels */
         for(j = 0; j < 4; j++){
