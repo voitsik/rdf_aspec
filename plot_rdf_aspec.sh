@@ -23,7 +23,7 @@ band2=$3
 
 name=$(basename $rdf_file .rdf)
 
-echo "Integration time: $(echo "scale=3; 31.25 * $ch * $int / 10^9" | bc -lq) s"
+echo "Integration time: $(echo "scale=3; 2 * 31.25 * $ch * $int / 10^9" | bc -lq) s"
 rdf_aspec $rdf_file $ch $int > ${name}.sp || exit 1
 
 

@@ -122,7 +122,6 @@ static size_t decode_2bit(const uint8_t * const in, float **out, size_t n)
     return n;
 }
 
-
 #define GET_FIELD(dest, src, n)     \
         do {                        \
             strncpy(dest, src, n);  \
