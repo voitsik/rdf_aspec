@@ -35,12 +35,12 @@ const char program[] = "rdf_aspec";
 const char author[]  = "Petr Voytsik";
 const char version[] = "1.0.96";
 
+
 /* Decoded RDF-file header */
 typedef struct rdf_header{
-    char sig[5];
-    uint16_t header_size;
-    /*char date[19];*/
-    time_t date;
+    char sig[5];          /* RDF1 */
+    uint16_t header_size; /* Should be 256 bytes */
+    time_t date;          /* Unix time of recording start */
     char station[12];
     char source[12];
     char exper[12];
