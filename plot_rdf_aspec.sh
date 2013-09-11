@@ -35,7 +35,7 @@ set xlabel "Frequency (MHz)"
 set title "$(sed -n '1 s/#//p' $name.sp)"
 set key box center bottom
 
-plot [-16:16][0:2] \
+plot [-16:16][0:] \
     '${name}.sp' u 1:2      w l lc 1 notitle, 0/0 w l lc 1 lw 5 title '$band1 (USB)', \
     '${name}.sp' u (-\$1):3 w l lc 2 notitle, 0/0 w l lc 2 lw 5 title '$band1 (LSB)', \
     '${name}.sp' u 1:4      w l lc 3 notitle, 0/0 w l lc 3 lw 5 title '$band2 (USB)', \
