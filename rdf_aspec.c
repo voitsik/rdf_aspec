@@ -33,7 +33,7 @@
 
 const char program[] = "rdf_aspec";
 const char author[]  = "Petr Voytsik";
-const char version[] = "1.0.96";
+const char version[] = "2.0";
 
 
 /* Decoded RDF-file header */
@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
     fftwf_plan p;
     float re, im;
     double df, freq, time_off = 0.;
-    int bits; /* Number of bits per sample */
+    int bits;   /* Number of bits per sample */
     rdf_header_t rdf_info;
     char header[256];
     size_t (*decode)(const uint8_t * const , float **, size_t );
@@ -310,7 +310,6 @@ int main(int argc, char *argv[])
                 re = creal(c_data[j][i]);
                 im = cimag(c_data[j][i]);
                 sp[j][i] += (re*re + im*im)/(float)(2*N);
-                /*sp[j][i] += (re*re + im*im);*/
             }
         }
     }
