@@ -49,8 +49,6 @@ typedef struct rdf_header{
     char rdr_mode[4];
 } rdf_header_t;
 
-static size_t count = 0;
-
 static float lut1bit[256][8];
 static float lut2bit[256][4];
 
@@ -83,7 +81,7 @@ static void initluts()
  *  Convert 1bit encoded raw data to 4 float arrays
  *  n - number of samples to decode
  */
-static int decode_1bit(const uint8_t * const in, float **out, size_t n)
+static size_t decode_1bit(const uint8_t * const in, float **out, size_t n)
 {
     size_t  i;
     float *fp;
@@ -99,9 +97,8 @@ static int decode_1bit(const uint8_t * const in, float **out, size_t n)
         out[2][2*i+1] = fp[6];
         out[3][2*i+1] = fp[7];
     }
-    count += n;
 
-    return 0;
+    return n;
 }
 
 /**
@@ -109,7 +106,7 @@ static int decode_1bit(const uint8_t * const in, float **out, size_t n)
  *  Convert 2bit encoded raw data to 4 float arrays
  *  n - number of samples to decode
  */
-static int decode_2bit(const uint8_t * const in, float **out, size_t n)
+static size_t decode_2bit(const uint8_t * const in, float **out, size_t n)
 {
     size_t  i;
     float *fp;
@@ -121,9 +118,8 @@ static int decode_2bit(const uint8_t * const in, float **out, size_t n)
         out[2][i]   = fp[2];
         out[3][i]   = fp[3];
     }
-    count += n;
 
-    return 0;
+    return n;
 }
 
 
@@ -229,7 +225,8 @@ int main(int argc, char *argv[])
     int bits; /* Number of bits per sample */
     rdf_header_t rdf_info;
     char header[256];
-    int (*decode)(const uint8_t * const , float **, size_t );
+    size_t (*decode)(const uint8_t * const , float **, size_t );
+    size_t count = 0;
     
     if(argc < 4){
         usage();
@@ -305,7 +302,7 @@ int main(int argc, char *argv[])
             break;
         }
         
-        decode(raw_data, f_data, 2*N);
+        count += decode(raw_data, f_data, 2*N);
 
         /* Four channels */
         for(j = 0; j < 4; j++){
