@@ -15,7 +15,7 @@
 
 const char program[] = "rdf_aspec";
 const char author[]  = "Petr Voytsik";
-const char version[] = "1.0.95";
+const char version[] = "1.0.96";
 
 /* Decoded RDF-file header */
 typedef struct rdf_header{
