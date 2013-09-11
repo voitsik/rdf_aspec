@@ -173,6 +173,11 @@ static int parse_rdf_header(const char *h, rdf_header_t *info)
     info->rec_mode = h[59];
     GET_FIELD(info->rdr_mode, &h[60], 3);
 
+    fprintf(stderr, " station = %s\n", info->station);
+    fprintf(stderr, " source = %s\n", info->source);
+    fprintf(stderr, " experiment = %s\n", info->exper);
+    fprintf(stderr, " data rate = %d\n", info->data_rate);
+
     if(info->data_rate == 16 && !strcmp(info->rdr_mode, "DEC")){
         bits = 1;
     }else if(info->data_rate == 32){
@@ -183,6 +188,8 @@ static int parse_rdf_header(const char *h, rdf_header_t *info)
         bits = -1;
     }
     
+    fprintf(stderr, " bits = %d\n", bits);
+
     return bits;
 }
 
