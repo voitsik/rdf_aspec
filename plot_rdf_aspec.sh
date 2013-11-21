@@ -3,7 +3,7 @@
 ### Setup
 
 # Number of channels
-ch=2048
+ch=4096
 
 # Number of spectra to integrate
 int=100000
