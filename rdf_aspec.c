@@ -319,6 +319,9 @@ int main(int argc, char *argv[])
                 sp[j][i] += (re*re + im*im)/(float)(2*N);
             }
         }
+
+        if(k % 100 == 0)
+            fprintf(stderr, "%.1f%%\r", 100.f * (float)k / (float)M);
     }
 
     fprintf(stderr, "%lu samples decoded\n", count);
