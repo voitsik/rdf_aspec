@@ -251,8 +251,10 @@ int main(int argc, char *argv[])
     /* Number of spectra to summ */
     M = atol(argv[3]);
 
-    if(argc == 5)
+    if(argc == 5){
         time_off = atof(argv[4]);
+        offset = (off_t)(400. * 40000. * time_off);
+    }
 
     n = fread(header, sizeof(uint8_t), 256UL, f);
     if(n != 256){
@@ -277,8 +279,6 @@ int main(int argc, char *argv[])
 
         exit(EXIT_FAILURE);
     }
-
-    offset = (off_t)(400. * 40000. * time_off);
 
     if(offset)
         if(fseeko(f, offset, SEEK_CUR) < 0)
