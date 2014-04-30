@@ -198,12 +198,11 @@ static int parse_rdf_header(const char *h, rdf_header_t *info)
  */
 static void print_header(rdf_header_t *h, time_t t_off)
 {
-    char *time_str;
+    char time_str[64];
     time_t t = h->date + t_off;
 
-    time_str = ctime(&t);
-    time_str[strlen(time_str)-1] = 0;
-    printf("#%s (%sUT)\n", h->exper, time_str);
+    strftime(time_str, sizeof(time_str), "%F %T", gmtime(&t));
+    printf("#%s (%s UT)\n", h->exper, time_str);
 }
 
 static void usage()
