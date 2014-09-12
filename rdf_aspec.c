@@ -41,12 +41,13 @@ typedef struct rdf_header{
     char sig[5];          /* RDF1 */
     uint16_t header_size; /* Should be 256 bytes */
     time_t date;          /* Unix time of recording start */
-    char station[12];
-    char source[12];
-    char exper[12];
+    char station[18];
+    char source[18];
+    char exper[18];
     int data_rate;
     char rec_mode;
     char rdr_mode[4];
+    char format_version;   /* 1 or 2 now */
 } rdf_header_t;
 
 static float lut1bit[256][8];
@@ -144,8 +145,12 @@ static int parse_rdf_header(const char *h, rdf_header_t *info)
 
     GET_FIELD(info->sig, h, 4);
 
-    if(strcmp(info->sig, "RDF1")){
-        fprintf(stderr, "Wrong RDF signature '%s' while RDF1 expected.\n", info->sig);
+    if(!strcmp(info->sig, "RDF1")){
+        info->format_version = 1;
+    }else if(!strcmp(info->sig, "RDF2")){
+        info->format_version = 2;
+    }else{
+        fprintf(stderr, "Wrong RDF signature '%s' while 'RDF1' or 'RDF2' expected.\n", info->sig);
 
         return -1;
     }
@@ -165,13 +170,25 @@ static int parse_rdf_header(const char *h, rdf_header_t *info)
     strptime(data_date, "%Y %j-%H:%M:%S", &tm0);
     info->date = mktime(&tm0);
 
-    GET_FIELD(info->station, &h[24], 11);
-    GET_FIELD(info->source, &h[35], 11);
-    GET_FIELD(info->exper, &h[46], 11);
-    GET_FIELD(datarate, &h[57], 2);
-    info->data_rate = atoi(datarate);
-    info->rec_mode = h[59];
-    GET_FIELD(info->rdr_mode, &h[60], 3);
+    if(info->format_version == 1){
+        GET_FIELD(info->station, &h[24], 11);
+        GET_FIELD(info->source, &h[35], 11);
+        GET_FIELD(info->exper, &h[46], 11);
+        GET_FIELD(datarate, &h[57], 2);
+        info->data_rate = atoi(datarate);
+        info->rec_mode = h[59];
+        GET_FIELD(info->rdr_mode, &h[60], 3);
+    }else if(info->format_version == 2){
+        GET_FIELD(info->station, &h[0x18], 17);
+        GET_FIELD(info->source, &h[0x29], 17);
+        GET_FIELD(info->exper, &h[0x3A], 17);
+        GET_FIELD(datarate, &h[0x4B], 2);
+        info->data_rate = atoi(datarate);
+        info->rec_mode = h[0x4D];
+        GET_FIELD(info->rdr_mode, &h[0x4E], 3);
+    }else{
+        return -1;
+    }
 
     fprintf(stderr, " station = %s\n", info->station);
     fprintf(stderr, " source = %s\n", info->source);
