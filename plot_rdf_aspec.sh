@@ -28,8 +28,8 @@ rdf_aspec $rdf_file $ch $int > ${name}.sp || exit 1
 
 
 cat > "${name}.gnuplot" << EOF
-set term postscript color solid
-set output "${name}.ps"
+set term pdf font "Monospace"
+set output "${name}.pdf"
 
 set xlabel "Frequency (MHz)"
 set title "$(sed -n '1 s/#//p' $name.sp)"
