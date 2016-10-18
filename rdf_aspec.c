@@ -150,7 +150,7 @@ static int parse_rdf_header(const char *h, rdf_header_t *info)
     }else if(!strcmp(info->sig, "RDF2")){
         info->format_version = 2;
     }else{
-        fprintf(stderr, "Wrong RDF signature '%s' while 'RDF1' or 'RDF2' expected.\n", info->sig);
+        fprintf(stderr, "Wrong RDF signature. 'RDF1' or 'RDF2' were expected.\n");
 
         return -1;
     }
@@ -166,6 +166,8 @@ static int parse_rdf_header(const char *h, rdf_header_t *info)
     GET_FIELD(data_date, &h[6], 18);
 
     /* Decode date/time */
+    setenv("TZ", "UTC", 1);
+    tzset();
     memset(&tm0, 0, sizeof(tm0));
     strptime(data_date, "%Y %j-%H:%M:%S", &tm0);
     info->date = mktime(&tm0);
