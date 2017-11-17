@@ -1,4 +1,5 @@
 *.[oa]
 *~
 *.swp
+*.bak
 rdf_aspec
